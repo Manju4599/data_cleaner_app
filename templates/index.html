@@ -1,0 +1,414 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0"><i class="fas fa-upload me-2"></i>Upload & Clean Data</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-6">
+                        <form id="uploadForm" method="POST" enctype="multipart/form-data">
+                            <div class="mb-4">
+                                <label for="file" class="form-label fw-bold">Select Data File</label>
+                                <input class="form-control" type="file" id="file" name="file" required 
+                                       accept=".csv,.xlsx,.xls,.json,.txt">
+                                <div class="form-text">
+                                    Supported formats: CSV, Excel (XLSX, XLS), JSON, TXT (Max: 50MB)
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <button type="button" class="btn btn-outline-primary" id="previewBtn">
+                                    <i class="fas fa-eye me-1"></i>Preview Data
+                                </button>
+                            </div>
+
+                            <div id="previewSection" class="d-none">
+                                <h5 class="mt-4 mb-3">Data Preview</h5>
+                                <div id="previewContent" class="table-responsive">
+                                    <!-- Preview will be loaded here -->
+                                </div>
+                            </div>
+
+                            <h5 class="mt-4 mb-3">Cleaning Options</h5>
+                            
+                            <div class="accordion mb-4" id="cleaningOptions">
+                                <!-- Missing Values -->
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#missingValues">
+                                            <i class="fas fa-exclamation-triangle me-2 text-warning"></i>Missing Values
+                                        </button>
+                                    </h2>
+                                    <div id="missingValues" class="accordion-collapse collapse show">
+                                        <div class="accordion-body">
+                                            <div class="mb-3">
+                                                <label class="form-label">Handling Method</label>
+                                                <select class="form-select" name="handle_missing">
+                                                    <option value="auto" selected>Auto-detect best method</option>
+                                                    <option value="mean">Fill with Mean (numeric only)</option>
+                                                    <option value="median">Fill with Median (numeric only)</option>
+                                                    <option value="mode">Fill with Mode</option>
+                                                    <option value="drop">Drop Rows with Missing Values</option>
+                                                    <option value="none">Don't handle</option>
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Column Drop Threshold</label>
+                                                <input type="range" class="form-range" min="0" max="1" step="0.1" 
+                                                       name="missing_threshold" value="0.5">
+                                                <div class="d-flex justify-content-between">
+                                                    <small>0%</small>
+                                                    <small>50%</small>
+                                                    <small>100%</small>
+                                                </div>
+                                                <div class="form-text">
+                                                    Drop columns if missing values exceed this percentage
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Duplicates -->
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#duplicates">
+                                            <i class="fas fa-copy me-2 text-info"></i>Duplicate Records
+                                        </button>
+                                    </h2>
+                                    <div id="duplicates" class="accordion-collapse collapse">
+                                        <div class="accordion-body">
+                                            <div class="mb-3">
+                                                <label class="form-label">Handling Method</label>
+                                                <select class="form-select" name="handle_duplicates">
+                                                    <option value="drop" selected>Remove Duplicates</option>
+                                                    <option value="flag">Flag Duplicates (add column)</option>
+                                                    <option value="none">Don't handle</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Data Standardization -->
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#standardization">
+                                            <i class="fas fa-sliders-h me-2 text-success"></i>Data Standardization
+                                        </button>
+                                    </h2>
+                                    <div id="standardization" class="accordion-collapse collapse">
+                                        <div class="accordion-body">
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox" name="standardize_text" id="standardizeText" checked>
+                                                <label class="form-check-label" for="standardizeText">
+                                                    Standardize Text (lowercase, trim, remove extra spaces)
+                                                </label>
+                                            </div>
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox" name="standardize_dates" id="standardizeDates" checked>
+                                                <label class="form-check-label" for="standardizeDates">
+                                                    Standardize Date Formats
+                                                </label>
+                                            </div>
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox" name="infer_types" id="inferTypes" checked>
+                                                <label class="form-check-label" for="inferTypes">
+                                                    Auto-detect Data Types
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Outliers -->
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#outliers">
+                                            <i class="fas fa-chart-line me-2 text-danger"></i>Outlier Detection
+                                        </button>
+                                    </h2>
+                                    <div id="outliers" class="accordion-collapse collapse">
+                                        <div class="accordion-body">
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox" name="remove_outliers" id="removeOutliers">
+                                                <label class="form-check-label" for="removeOutliers">
+                                                    Remove Outliers
+                                                </label>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Detection Method</label>
+                                                <select class="form-select" name="outlier_method">
+                                                    <option value="iqr" selected>IQR (Interquartile Range)</option>
+                                                    <option value="zscore">Z-Score</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Advanced Options -->
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#advanced">
+                                            <i class="fas fa-cogs me-2 text-secondary"></i>Advanced Options
+                                        </button>
+                                    </h2>
+                                    <div id="advanced" class="accordion-collapse collapse">
+                                        <div class="accordion-body">
+                                            <div class="mb-3">
+                                                <label class="form-label">File Encoding</label>
+                                                <select class="form-select" name="encoding">
+                                                    <option value="utf-8" selected>UTF-8 (Recommended)</option>
+                                                    <option value="latin1">Latin-1</option>
+                                                    <option value="cp1252">Windows-1252</option>
+                                                    <option value="iso-8859-1">ISO-8859-1</option>
+                                                    <option value="ascii">ASCII</option>
+                                                </select>
+                                                <div class="form-text">
+                                                    Select encoding if you encounter character issues
+                                                </div>
+                                            </div>
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox" name="save_report" id="saveReport" checked>
+                                                <label class="form-check-label" for="saveReport">
+                                                    Generate detailed cleaning report
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-magic me-2"></i>Clean My Data
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="col-lg-6">
+                        <div class="card h-100">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>How It Works</h5>
+                            </div>
+                            <div class="card-body">
+                                <ol class="list-group list-group-numbered">
+                                    <li class="list-group-item border-0">
+                                        <strong>Upload your data file</strong> (CSV, Excel, JSON)
+                                    </li>
+                                    <li class="list-group-item border-0">
+                                        <strong>Configure cleaning options</strong> using the accordion panels
+                                    </li>
+                                    <li class="list-group-item border-0">
+                                        <strong>Preview data</strong> before cleaning (optional)
+                                    </li>
+                                    <li class="list-group-item border-0">
+                                        <strong>Click "Clean My Data"</strong> to start the process
+                                    </li>
+                                    <li class="list-group-item border-0">
+                                        <strong>Download cleaned data</strong> and view detailed report
+                                    </li>
+                                </ol>
+                                
+                                <hr>
+                                
+    
+
+                                <hr>
+                                
+                                <h6 class="mt-3">Sample Data:</h6>
+                                <p class="small">Don't have a file to test? Create a simple CSV:</p>
+                                <pre class="bg-light p-3 rounded small"><code>Name,Age,Email,Join_Date,Salary
+John Doe,25,john@example.com,2023-01-15,50000
+Jane Smith,,jane@example.com,15/01/2023,55000
+Bob Johnson,30,bob@example.com,2023-01-20,52000
+John Doe,25,john@example.com,2023-01-15,50000
+Alice Brown,35,alice@example.com,01-20-2023,60000
+Carol White,28,carol@example.com,2023-01-25,48000</code></pre>
+                                <p class="small text-muted">Copy this into a text file and save as <code>sample.csv</code></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div class="modal fade" id="loadingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-5">
+                <div class="spinner-border text-primary" style="width: 4rem; height: 4rem;" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h4 class="mt-4">Cleaning Your Data</h4>
+                <p class="text-muted">Please wait while we process your file...</p>
+                <div class="progress mt-3">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%"></div>
+                </div>
+                <p class="small text-muted mt-2">This may take a few moments depending on file size</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // File upload preview
+    $('#file').on('change', function() {
+        const fileName = $(this).val().split('\\').pop();
+        if (fileName) {
+            $(this).next('.form-text').html(`Selected: <strong>${fileName}</strong>`);
+        }
+    });
+
+    // Preview data button
+    $('#previewBtn').on('click', function() {
+        const fileInput = $('#file')[0];
+        if (!fileInput.files.length) {
+            alert('Please select a file first');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        const $btn = $(this);
+        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i>Loading...');
+
+        $.ajax({
+            url: '/preview',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.error) {
+                    alert('Error: ' + response.error);
+                } else {
+                    // Build preview table
+                    let tableHtml = `
+                        <div class="alert alert-info">
+                            <strong>File Info:</strong> ${response.shape[0]} rows × ${response.shape[1]} columns
+                            <br>
+                            <strong>Missing Values:</strong> ${Object.values(response.missing_values).reduce((a, b) => a + b, 0)} total
+                        </div>
+                        <table class="table table-sm table-bordered table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>#</th>
+                                    ${response.columns.map((col, index) => 
+                                        `<th title="Data type: ${response.dtypes[col] || 'unknown'}\nMissing: ${response.missing_values[col]}">
+                                            ${col}
+                                            ${response.missing_values[col] > 0 ? 
+                                                `<span class="badge bg-warning float-end">${response.missing_values[col]}</span>` : ''}
+                                        </th>`
+                                    ).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${response.head.map((row, rowIndex) => `
+                                    <tr>
+                                        <td class="text-muted">${rowIndex + 1}</td>
+                                        ${response.columns.map(col => {
+                                            const value = row[col];
+                                            if (value === null || value === undefined || value === '') {
+                                                return `<td class="table-warning"><em class="text-muted">null</em></td>`;
+                                            }
+                                            return `<td>${typeof value === 'object' ? JSON.stringify(value) : value}</td>`;
+                                        }).join('')}
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                    
+                    $('#previewContent').html(tableHtml);
+                    $('#previewSection').removeClass('d-none');
+                    $('html, body').animate({
+                        scrollTop: $('#previewSection').offset().top - 20
+                    }, 500);
+                }
+            },
+            error: function(xhr) {
+                alert('Error loading preview. Please try again.');
+            },
+            complete: function() {
+                $btn.prop('disabled', false).html('<i class="fas fa-eye me-1"></i>Preview Data');
+            }
+        });
+    });
+
+    // Form submission with loading indicator
+    $('#uploadForm').on('submit', function(e) {
+        const fileInput = $('#file')[0];
+        if (!fileInput.files.length) {
+            alert('Please select a file first');
+            e.preventDefault();
+            return;
+        }
+
+        // Show loading modal
+        const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+        loadingModal.show();
+        
+        // Disable form submission while processing
+        $(this).find('button[type="submit"]').prop('disabled', true);
+    });
+
+    // Accordion toggle icons
+    $('.accordion-button').on('click', function() {
+        const $icon = $(this).find('i');
+        const isCollapsed = $(this).hasClass('collapsed');
+        
+        // Reset all accordion icons to chevron-down
+        $('.accordion-button').each(function() {
+            $(this).find('i').removeClass('fa-chevron-up').addClass('fa-chevron-down');
+        });
+        
+        // Set clicked accordion icon
+        if (isCollapsed) {
+            $icon.removeClass('fa-chevron-down').addClass('fa-chevron-up');
+        }
+    });
+
+    // Initialize accordion icons
+    $('.accordion-button').each(function() {
+        if (!$(this).hasClass('collapsed')) {
+            $(this).find('i').removeClass('fa-chevron-down').addClass('fa-chevron-up');
+        }
+    });
+
+    // Range slider value display
+    $('input[type="range"]').on('input', function() {
+        const value = $(this).val();
+        const percent = Math.round(value * 100);
+        $(this).next().find('small:nth-child(2)').text(percent + '%');
+    });
+
+    // Sample data copy button
+    $('pre code').on('click', function() {
+        const text = $(this).text();
+        navigator.clipboard.writeText(text).then(function() {
+            const $pre = $(this).closest('pre');
+            const originalText = $pre.find('.copy-message').text();
+            $pre.append('<span class="copy-message text-success small ms-2">Copied!</span>');
+            setTimeout(function() {
+                $pre.find('.copy-message').remove();
+            }, 2000);
+        }.bind(this));
+    });
+});
+</script>
+{% endblock %}

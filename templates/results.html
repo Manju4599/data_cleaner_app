@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block title %}Results{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-success text-white">
+                <h3 class="mb-0"><i class="fas fa-check-circle me-2"></i>Data Cleaning Complete!</h3>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-success">
+                    <h5><i class="fas fa-file-download me-2"></i>Your cleaned data is ready!</h5>
+                    <p class="mb-0">
+                        Original file: <strong>{{ original_filename }}</strong><br>
+                        Cleaned file: <strong>{{ cleaned_filename }}</strong>
+                    </p>
+                </div>
+
+                <div class="d-grid gap-2 d-md-flex justify-content-md-start mb-4">
+                    <a href="{{ url_for('download_file', filename=cleaned_filename) }}" 
+                       class="btn btn-primary btn-lg me-md-2">
+                        <i class="fas fa-download me-2"></i>Download Cleaned Data
+                    </a>
+                    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-lg">
+                        <i class="fas fa-redo me-2"></i>Clean Another File
+                    </a>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-lg-6">
+                        <div class="card report-card h-100">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Cleaning Summary</h5>
+                            </div>
+                            <div class="card-body">
+                                <table class="table">
+                                    <tr>
+                                        <th>Original Size:</th>
+                                        <td>{{ report.original_rows }} rows × {{ report.original_columns }} columns</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Final Size:</th>
+                                        <td>{{ report.final_rows }} rows × {{ report.final_columns }} columns</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Rows Removed:</th>
+                                        <td><span class="badge bg-warning">{{ report.rows_removed }}</span></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Columns Removed:</th>
+                                        <td><span class="badge bg-warning">{{ report.columns_removed }}</span></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Duplicates Removed:</th>
+                                        <td><span class="badge bg-danger">{{ report.duplicates_removed|default(0) }}</span></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Outliers Removed:</th>
+                                        <td><span class="badge bg-danger">{{ report.outliers_removed|default(0) }}</span></td>
+                                    </tr>
+                                    {% if report.date_columns %}
+                                    <tr>
+                                        <th>Date Columns:</th>
+                                        <td>
+                                            {% for col in report.date_columns %}
+                                                <span class="badge bg-success">{{ col }}</span>
+                                            {% endfor %}
+                                        </td>
+                                    </tr>
+                                    {% endif %}
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-6">
+                        <div class="card report-card h-100">
+                            <div class="card-header bg-warning text-white">
+                                <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Steps Performed</h5>
+                            </div>
+                            <div class="card-body">
+                                <ul class="list-group list-group-flush">
+                                    {% for step in report.steps_performed %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        {% if step == 'missing_values' %}
+                                            <span><i class="fas fa-exclamation-triangle text-warning me-2"></i>Missing Values Handling</span>
+                                        {% elif step == 'duplicates' %}
+                                            <span><i class="fas fa-copy text-info me-2"></i>Duplicate Removal</span>
+                                        {% elif step == 'text_standardization' %}
+                                            <span><i class="fas fa-text-height text-primary me-2"></i>Text Standardization</span>
+                                        {% elif step == 'date_standardization' %}
+                                            <span><i class="fas fa-calendar-alt text-success me-2"></i>Date Standardization</span>
+                                        {% elif step == 'outlier_removal' %}
+                                            <span><i class="fas fa-chart-line text-danger me-2"></i>Outlier Removal</span>
+                                        {% elif step == 'type_inference' %}
+                                            <span><i class="fas fa-cogs text-secondary me-2"></i>Type Inference</span>
+                                        {% elif step == 'column_standardization' %}
+                                            <span><i class="fas fa-columns text-info me-2"></i>Column Standardization</span>
+                                        {% else %}
+                                            <span><i class="fas fa-check text-success me-2"></i>{{ step|replace('_', ' ')|title }}</span>
+                                        {% endif %}
+                                        <span class="badge bg-primary rounded-pill">✓</span>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mt-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-eye me-2"></i>Preview Cleaned Data (First 10 Rows)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            {{ data_preview|safe }}
+                        </div>
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                Showing 10 of {{ report.final_rows }} rows
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                {% if report.column_renames %}
+                <div class="card mt-4">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0"><i class="fas fa-exchange-alt me-2"></i>Column Renames</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Original Name</th>
+                                        <th>→</th>
+                                        <th>New Name</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for original, new in report.column_renames.items() %}
+                                    <tr>
+                                        <td><code>{{ original }}</code></td>
+                                        <td><i class="fas fa-arrow-right text-primary"></i></td>
+                                        <td><code>{{ new }}</code></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="alert alert-info mt-4">
+                    <h6><i class="fas fa-info-circle me-2"></i>Tips for Your Cleaned Data:</h6>
+                    <ul class="mb-0">
+                        <li>Always verify the cleaned data matches your expectations</li>
+                        <li>Keep the original file as a backup</li>
+                        <li>The cleaned file will be available for download for 1 hour</li>
+                        <li>You can use the API endpoint at <code>/api/clean</code> for automated cleaning</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
